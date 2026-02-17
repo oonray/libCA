@@ -16,7 +16,7 @@ LIB_BD:=$(BUILD_D)/lib
 DIRS:=$(OBJ_BD) $(TEST_BD) $(LIB_BD) $(LIB_BD)
 
 #COMPILE
-CC:=clang
+CC:=gcc
 CMD_C:=./compile_commands.json
 BEAR_C:=bear --append --output $(CMD_C) --
 
@@ -84,6 +84,6 @@ mongoose: libmongoose.a
 .PHONY: tests
 tests: munit bstrlib tree_tests
 
-.PHONY: tree
-tree: H_FILES+=src/ca_tree.h
-tree: src/ca_tree.h #single header
+.PHONY: data
+data: H_FILES+=src/ca_data.h
+data: src/ca_data.h #single header
