@@ -1,83 +1,82 @@
 #ifndef __CA_DATA_
 #define __CA_DATA_
 
-#include <stddef.h>
-#include <string.h>
+/*
+ CAN be set to CA_NO_DATA (0)
+ indicating that there is no value
+ will use defuault values
+ */
+#ifndef _OPTIONAL
+#define _OPTIONAL __CA_OPTIONAL
+#endif
+#ifndef __CA_OPTIONAL
+#define __CA_OPTIONAL
+#endif
 
-typedef unsigned char ca_byte;
-typedef unsigned int ca_num;
-
-typedef enum {
-    CA_DATA_DEF_MIN = 0,
-    CA_DATA_DEF_DATA = 64,
-    CA_DATA_DEF_MTYPE = sizeof(ca_byte),
-    CA_DATA_DEF_MLEN = CA_DATA_DEF_DATA * CA_DATA_DEF_MTYPE,
-    CA_DATA_DEF_MAX = CA_DATA_DEF_MLEN,
-}ca_data_def_f;
-
-typedef enum {
-    CA_VECTOR_MIN = 0,
-    CA_VECTOR_NO_DATA = 0,
-    CA_VECTOR_NO_ITEMS = 0,
-    CA_VECTOR_NO_START = 0,
-    CA_VECTOR_NO_OVERWRITE = 0,
-    CA_VECTOR_OVERWRITE = 1,
-    CA_VECTOR_MAX = 0,
-}ca_vector_f;
+/*
+ CAN not be set to CA_NO_DATA (0)
+ requires a value
+ */
+#ifndef _REQUIRED
+#define _REQUIRED __CA_REQUIRED
+#endif
+#ifndef __CA_REQUIRED
+#define __CA_REQUIRED
+#endif
 
 typedef struct {
     void *buf;
     struct {
-       ca_num cap;
-       size_t mem;
+       ca_mlen cap;
+       ca_mlen mem;
     }len;
 } ca_vector;
 
-typedef struct {
-    void *start;
-    void *end;
-    size_t span;
-}ca_data_view;
+ca_vector *ca_vector_new(
+       __CA_OPTIONAL ca_mlen mlen);
 
-ca_vector *ca_vector_new(void *init_data, size_t mlen);
+
+int ca_vector_read(ca_vector *vec,
+                   void *to,
+         _OPTIONAL ca_mlen mlen);
+
+int ca_vector_resize(
+         _OPTIONAL ca_vector *_REQUIRED vec,
+         _OPTIONAL ca_mlen mlen);
+
 
 int ca_vector_del(ca_vector *vec);
-int ca_vector_resize(ca_vector *vec, size_t mlen);
-
-int ca_vector_write(ca_vector *vec, void *data, size_t mlen, int overwrite);
-int ca_vector_read(ca_vector *vec, void *out, size_t mlen);
-
+int ca_vector_write(ca_vector *vec,
+                    void *data, size_t mlen,
+                    bool from_start);
 
 #endif
 
 #if defined(CA_DATA_IMPL) | defined(DEBUG) | defined(TEST)
+
 #include <stdlib.h>
 #include <errno.h>
 
-ca_vector *ca_vector_new(void *init, size_t mlen){
-    if(mlen < CA_VECTOR_NO_DATA
-       || (mlen <= CA_VECTOR_NO_DATA && init != NULL)
-      )goto inval;
-
+//VECTOR START
+ca_vector *ca_vector_new(ca_mlen mlen){
     ca_vector *out = calloc(1, sizeof(ca_vector));
     if(out==NULL) goto error;
 
-    out->len.mem = CA_DATA_DEF_MLEN;
-    if(mlen > CA_VECTOR_NO_DATA)
-        if(mlen > CA_DATA_DEF_MLEN)
-            out->len.mem = mlen;
+    out->len.mem = mlen > CA_VECTOR_NO_DATA ?
+                   mlen : CA_DATA_DEF_MLEN <= mlen ?
+                   mlen : CA_DATA_DEF_MLEN;
+
+    out->buf = calloc(1,out->len.mem);
 
     out->len.cap = out->len.mem;
     out->buf = calloc(1, out->len.mem);
+    if(out==NULL) goto free;
 
-    if(mlen > CA_VECTOR_NO_DATA)
-        if(init!=NULL)
-            for(int i = 0;i < mlen;i++)
-                ((ca_byte *)out->buf)[i] = ((ca_byte *)init)[i];
 
     return out;
-inval:
-    errno=EINVAL;
+free:
+    ca_vector_del(out);
+    return NULL;
 error:
     return NULL;
 }
@@ -92,22 +91,24 @@ int ca_vector_del(ca_vector *vec){
 inval:
     errno=EINVAL;
     return 0;
+//END
 }
 
 int ca_vector_resize(ca_vector *vec, size_t mlen){
-    if(mlen < CA_VECTOR_NO_DATA) goto inval;
-    if(vec == NULL) vec = ca_vector_new(NULL, CA_VECTOR_NO_DATA);
+    if(mlen < CA_NO_DATA) goto inval;
+    if(vec == NULL) vec = ca_vector_new(CA_NO_DATA);
 
-    if(mlen == CA_VECTOR_NO_DATA) mlen = CA_DATA_DEF_MLEN;
+    vec->len.mem =  ca_optional_len(mlen);
     vec = realloc(vec, mlen);
     vec->len.cap += mlen;
     return 1;
 inval:
     errno=EINVAL;
     return 0;
+//END
 }
 
-int ca_vector_write(ca_vector *vec, void *data, size_t mlen, int overwrite){
+int ca_vector_write(ca_vector *vec, void *data, size_t mlen, bool overwrite){
   if(vec==NULL
     || data==NULL
     || mlen <= CA_VECTOR_NO_DATA
@@ -131,6 +132,7 @@ int ca_vector_write(ca_vector *vec, void *data, size_t mlen, int overwrite){
 inval:
   errno=EINVAL;
   return 0;
+//END
 }
 
 int ca_vector_read(ca_vector *vec, void *out, size_t mlen){
@@ -150,6 +152,7 @@ int ca_vector_read(ca_vector *vec, void *out, size_t mlen){
 inval:
   errno=EINVAL;
   return 0;
-
+//END
 }
+//VECTOR END
 #endif

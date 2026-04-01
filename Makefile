@@ -20,8 +20,8 @@ CC:=gcc
 CMD_C:=./compile_commands.json
 BEAR_C:=bear --append --output $(CMD_C) --
 
-VPATH:=$(VPATH):src:$(wildcard src/*):$(wildcard build/*):lib:$(wildcard lib/*):tests
-FLAGS:=$(FLAGS) $(patsubst %,-I%,$(subst :, ,$(VPATH))) -Wall --std=c23
+VPATH:=$(VPATH):src:lib:$(wildcard lib/**):tests:build:$(OBJ_BD):$(LIB_BD)
+FLAGS:=$(FLAGS) $(patsubst %,-I%,$(subst :, ,$(VPATH))) -Wall
 
 #INSTALL
 IND=/usr/
@@ -30,6 +30,11 @@ LIB_IND=$(IND)/lib32/
 
 .PHONY: all
 all: debug
+
+.PHONY: test
+test: FLAGS:=$(FLAGS) -D TESTS -O0 -g
+test: CC:=$(BEAR_C) $(CC)
+test: dirs tests
 
 .PHONY: debug
 debug: FLAGS:=$(FLAGS) -D DEBUG -O0 -g
@@ -62,11 +67,11 @@ dirs:
 %.o: %.c %.h
 	$(CC) $(FLAGS) -c -o $(OBJ_BD)/$@ $<
 
+%.o: %.c %.h
+	$(CC) $(FLAGS) -c -o $(OBJ_BD)/$@ $<
+
 lib%.a: %.o
 	ar rcs $(LIB_BD)/$@ $(OBJ_BD)/$<
-
-%_tests: tests/%_tests.c munit
-	$(CC) $(FLAGS) -o $(TEST_BD)/$@ $< -L $(LIB_BD) -l munit -lbstrlib
 
 #LIBS
 .PHONY: bstrlib
@@ -82,8 +87,8 @@ mongoose: LIB_FILES:=$(LIB_FILES) libmongoose.a
 mongoose: libmongoose.a
 
 .PHONY: tests
-tests: munit bstrlib tree_tests
+tests: TESTS:=src/ca_vector.c
+tests: tests/main.c munit bstrlib ca_vector.o src/ca_vector.h
+	$(CC) $(FLAGS) -o $(TEST_BD)/$@ $< $(TESTS) -L $(LIB_BD) -lmunit
 
-.PHONY: data
-data: H_FILES+=src/ca_data.h
-data: src/ca_data.h #single header
+#TESTS

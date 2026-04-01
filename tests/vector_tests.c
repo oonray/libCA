@@ -25,7 +25,7 @@ MunitResult test_data_new(const MunitParameter params[],
 }
 
 int main(int argc, char *argv[]) {
-  MunitTest tests[] = {
+  const MunitTest tests[] = {
       {"test_data_new", test_data_new, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL},
       {NULL, NULL, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL}};
 
